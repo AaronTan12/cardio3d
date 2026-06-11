@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive 3D Cardiovascular System Explorer</title>
+    <!-- Google Fonts: Inter and Montserrat -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@400;500;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome Icons for modern visuals -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Three.js Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/renderers/CSS2DRenderer.js"></script>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-logo">
+                <i class="fa-solid fa-heart-pulse heartbeat-icon"></i>
+                <div class="logo-text">
+                    <h1>Cardio3D</h1>
+                    <span>Anatomy & Physiology Explorer</span>
+                </div>
+            </div>
+            <div class="header-tag">
+                <span class="badge badge-primary">Group Project</span>
+                <span class="badge badge-accent">Undergraduate Level</span>
+            </div>
+        </header>
+
+        <!-- Main Content Layout -->
+        <main class="app-main">
+            <!-- Left Panel: 3D Scene Viewport -->
+            <section class="viewport-panel">
+                <div id="canvas-container">
+                    <!-- Three.js Canvas will be injected here -->
+                    <div class="loading-overlay" id="loading-overlay">
+                        <div class="spinner"></div>
+                        <p>Constructing 3D Heart Model...</p>
+                    </div>
+                    
+                    <!-- 3D Projected Annotation Labels (Dynamic) -->
+                    <div id="labels-container" class="labels-container"></div>
+                </div>
+
+                <!-- 3D Overlay Controls -->
+                <div class="viewport-controls">
+                    <button id="btn-play-pause" class="ctrl-btn active" title="Play/Pause Heart Beating">
+                        <i class="fa-solid fa-pause"></i> <span>Pulsing</span>
+                    </button>
+                    <div class="ctrl-slider-group">
+                        <label for="slider-speed"><i class="fa-solid fa-gauge-high"></i> HR</label>
+                        <input type="range" id="slider-speed" min="40" max="150" value="72" step="1">
+                        <span id="label-bpm">72 BPM</span>
+                    </div>
+                    <button id="btn-reset-view" class="ctrl-btn" title="Reset Camera View">
+                        <i class="fa-solid fa-arrows-to-eye"></i> <span>Reset View</span>
+                    </button>
+                    <button id="btn-toggle-blood-path" class="ctrl-btn active" title="Toggle Blood Flow Visualization">
+                        <i class="fa-solid fa-droplet"></i> <span>Blood Path</span>
+                    </button>
+                    <button id="btn-toggle-flow" class="ctrl-btn" title="Start/Stop Blood Flow">
+                        <i class="fa-solid fa-water"></i> <span>Start Blood Flow</span>
+                    </button>
+                    <!-- Label Mode Toggle Group -->
+                    <div class="label-mode-group" title="Label display mode">
+                        <button id="btn-label-show" class="label-mode-btn active" data-mode="show" title="Show all component names">
+                            <i class="fa-solid fa-tags"></i><span>Labels</span>
+                        </button>
+                        <button id="btn-label-dot" class="label-mode-btn" data-mode="dot-only" title="Show dots only – tap to reveal name">
+                            <i class="fa-solid fa-circle-dot"></i><span>Dot Only</span>
+                        </button>
+                        <button id="btn-label-hide" class="label-mode-btn" data-mode="hide" title="Hide all labels">
+                            <i class="fa-solid fa-eye-slash"></i><span>Hide</span>
+                        </button>
+                    </div>
+                    <!-- Lighting intensity slider -->
+<label style="margin-left:10px; color:#fff; font-size:0.9rem;" title="Adjust scene brightness">
+    <i class="fa-solid fa-sun"></i> Brightness
+    <input type="range" id="slider-lightness" min="0.5" max="3" step="0.1" value="1.2" style="vertical-align: middle;">
+</label>
+
+                </div>
+
+                <!-- Floating Instruction Helper -->
+                <div class="floating-helper">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>Drag to rotate | Scroll to zoom | Click heart parts to explore</span>
+                </div>
+            </section>
+
+            <!-- Right Panel: Educational Dashboard -->
+            <section class="dashboard-panel">
+                <!-- Navigation Tabs -->
+                <nav class="dashboard-tabs">
+                    <button class="tab-btn active" data-tab="anatomy">
+                        <i class="fa-solid fa-stethoscope"></i> Anatomy Explorer
+                    </button>
+                </nav>
+
+                <!-- Tab Content Modules -->
+                <div class="tab-content-container">
+                    
+                    <!-- Tab 1: Anatomy Explorer -->
+                    <div class="tab-content active" id="tab-anatomy">
+                        <div class="anatomy-placeholder" id="anatomy-placeholder">
+                            <i class="fa-solid fa-hand-pointer pulse-animation"></i>
+                            <h3>Select a Heart Component</h3>
+                            <p>Click on any anatomical structure in the 3D model (or choose from the list below) to view detailed anatomical descriptions, functions, and physiological roles.</p>
+                            
+                            <div class="anatomical-list-grid" id="anatomical-list-grid">
+                                <!-- Buttons will be generated dynamically here by app.js -->
+                            </div>
+                        </div>
+
+                        <div class="anatomy-details hidden" id="anatomy-details">
+                            <div class="details-header">
+                                <span class="badge" id="part-oxygen-badge">Oxygenated</span>
+                                <h2 id="part-name">Left Ventricle</h2>
+                                <p class="pronunciation" id="part-pronunciation">/left ven-tri-kuhl/</p>
+                            </div>
+                            
+                            <div class="details-body">
+                                <div class="detail-section">
+                                    <h4><i class="fa-solid fa-circle-question"></i> Anatomical Description</h4>
+                                    <p id="part-description">Description goes here...</p>
+                                </div>
+                                <div class="detail-section">
+                                    <h4><i class="fa-solid fa-gears"></i> Key Physiological Function</h4>
+                                    <p id="part-function">Function goes here...</p>
+                                </div>
+                                <div class="detail-section highlight-box">
+                                    <h4><i class="fa-solid fa-kit-medical"></i> Clinical Relevance</h4>
+                                    <p id="part-clinical">Clinical connection goes here...</p>
+                                </div>
+                                
+                                <div class="detail-section" id="part-position-section" style="display: none;">
+                                    <h4><i class="fa-solid fa-location-dot"></i> 3D Position Offset</h4>
+                                    <div style="background: rgba(255,255,255,0.05); padding: 12px; border-radius: 6px; font-family: monospace; font-size: 0.9em; line-height: 1.8;">
+                                        <div>X: <span id="part-pos-x" style="color: #ff6b6b;">0.00</span></div>
+                                        <div>Y: <span id="part-pos-y" style="color: #51cf66;">0.00</span></div>
+                                        <div>Z: <span id="part-pos-z" style="color: #4dabf7;">0.00</span></div>
+                                    </div>
+                                    <p style="font-size: 0.8em; color: #999; margin-top: 8px;">Position relative to model origin (in normalized scale)</p>
+                                </div>
+                            </div>
+                            
+                            <button id="btn-back-to-list" class="btn-secondary">
+                                <i class="fa-solid fa-arrow-left"></i> Back to Anatomical List
+                            </button>
+                        </div>
+
+                        <div style="margin-top: 20px; text-align: center;">
+                            <button id="btn-toggle-manual-controls" class="btn-secondary" style="font-size: 0.85rem; padding: 8px 15px; opacity: 0.8;">
+                                <i class="fa-solid fa-sliders"></i> Show Developer Controls
+                            </button>
+                        </div>
+
+                        <div class="manual-control-card" id="manual-control-card" style="display: none; margin-top: 15px;">
+                            <h3>Manual Label & Blood Flow Controls</h3>
+                            <p class="section-intro">Adjust label positions or define custom circulation paths using separate red and blue lines.</p>
+                            <div class="field-row">
+                                <label for="label-part-select">Part to adjust</label>
+                                <select id="label-part-select" class="input-field">
+                                    <!-- Options generated dynamically by app.js -->
+                                </select>
+                            </div>
+                            <div class="field-row">
+                                <label for="offset-x-input">Label X offset</label>
+                                <input id="offset-x-input" class="input-field" type="number" value="0" step="0.01">
+                            </div>
+                            <div class="field-row">
+                                <label for="offset-y-input">Label Y offset</label>
+                                <input id="offset-y-input" class="input-field" type="number" value="0" step="0.01">
+                            </div>
+                            <div class="field-row">
+                                <label for="offset-z-input">Label Z offset</label>
+                                <input id="offset-z-input" class="input-field" type="number" value="0" step="0.1">
+                            </div>
+                            <div class="control-grid">
+                                <button id="btn-apply-label-offset" class="btn-secondary">Apply Label Offset</button>
+                                <button id="btn-reset-label-offset" class="btn-secondary">Reset Offset</button>
+                            </div>
+                            <div style="margin-top: 8px;">
+                                <button id="btn-clear-all-offsets" class="btn-secondary" style="color:#ff6b6b; border-color:rgba(255,100,100,0.3); font-size:0.78rem; padding:6px 12px;">
+                                    <i class="fa-solid fa-rotate-left"></i> Clear All Saved Positions
+                                </button>
+                            </div>
+                            
+                            <!-- Visibility Toggle added here -->
+                            <div class="field-row" style="margin-top: 15px; background: rgba(255,255,255,0.05); padding: 10px; border-radius: 6px;">
+                                <label style="display:flex; align-items:center; cursor:pointer;">
+                                    <input type="checkbox" id="chk-label-visibility" checked style="margin-right:10px;">
+                                    Label Visible on 3D Model
+                                </label>
+                            </div>
+                            
+                            <div style="background: rgba(0, 255, 100, 0.1); border: 2px solid #00ff44; border-radius: 8px; padding: 12px; margin-bottom: 15px; margin-top: 15px;">
+                                <h4 style="margin: 0 0 10px 0; color: #00ff44;">
+                                    <i class="fa-solid fa-cursor-pointer"></i> Click to Position Label (NEW)
+                                </h4>
+                                <p style="font-size: 0.85em; margin: 0 0 10px 0; color: #ccc;">
+                                    Select a part below, click "Position by Click", then click on the 3D model where you want the label to appear.
+                                </p>
+                                <div class="field-row">
+                                    <label for="label-position-part-select">Part to position</label>
+                                    <select id="label-position-part-select" class="input-field">
+                                        <option value="">-- Select a part --</option>
+                                        <!-- Options generated dynamically by app.js -->
+                                    </select>
+                                </div>
+                                <div class="control-grid">
+                                    <button id="btn-position-label-by-click" class="btn-secondary">
+                                        <i class="fa-solid fa-crosshairs"></i> Position by Click
+                                    </button>
+                                    <button id="btn-cancel-label-positioning" class="btn-secondary" style="display: none;">
+                                        <i class="fa-solid fa-circle-xmark"></i> Cancel
+                                    </button>
+                                </div>
+                                <div id="label-positioning-status" style="display: none; color: #00ff44; font-size: 0.9em; text-align: center; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 4px; margin-top: 10px;">
+                                    <i class="fa-solid fa-hand-pointer"></i> <span id="label-positioning-status-text"></span>
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            <div class="field-row">
+                                <label for="path-color-select">Active flow path</label>
+                                <select id="path-color-select" class="input-field">
+                                    <option value="red">Red path</option>
+                                    <option value="blue">Blue path</option>
+                                </select>
+                            </div>
+                            <div class="control-grid">
+                                <button id="btn-add-path-point" class="btn-secondary">Add point by click</button>
+                                <button id="btn-clear-path" class="btn-secondary">Clear Active Path</button>
+                            </div>
+                            <div class="field-row">
+                                <label for="path-point-list">Current selected path points</label>
+                                <textarea id="path-point-list" class="textarea-field" rows="4" readonly></textarea>
+                            </div>
+                            <div class="field-row">
+                                <label for="path-points-red-input">Red path points</label>
+                                <textarea id="path-points-red-input" class="textarea-field" rows="5" placeholder="Enter one point per line: x,y,z">0.15,0.9,0.0
+0.2,0.5,0.1
+0.2,0.0,0.1</textarea>
+                            </div>
+                            <div class="field-row">
+                                <label for="path-points-blue-input">Blue path points</label>
+                                <textarea id="path-points-blue-input" class="textarea-field" rows="5" placeholder="Enter one point per line: x,y,z">-0.15,0.9,0.0
+-0.2,0.55,-0.1
+-0.2,0.05,-0.1</textarea>
+                            </div>
+                            <div class="control-grid">
+                                <button id="btn-update-path" class="btn-secondary">Update Path</button>
+                            </div>
+                            <p class="help-text" id="path-point-help">Select a path and click the button to add points on the heart model.</p>
+                            <div class="field-row">
+                                <label for="slider-flow-speed">Flow speed</label>
+                                <input id="slider-flow-speed" type="range" min="0.1" max="2" step="0.05" value="0.6">
+                                <span id="flow-speed-value">0.60</span>
+                            </div>
+                        </div>
+                    </div>
+
+
+
+                    <!-- Tab 3 removed as requested -->
+
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer: EKG and Live Monitor -->
+        <footer class="app-footer">
+            <div class="monitor-card">
+                <div class="monitor-label">
+                    <span class="live-dot pulse-animation"></span> LIVE ECG MONITOR
+                </div>
+                <canvas id="ekg-canvas"></canvas>
+            </div>
+            
+            <div class="monitor-stats">
+                <div class="stat-box">
+                    <span class="stat-label">HEART RATE</span>
+                    <span class="stat-value" id="footer-bpm">72 <span class="stat-unit">BPM</span></span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">CARDIAC PHASE</span>
+                    <span class="stat-value" id="footer-phase">Diastole (Relaxation)</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">PRESSURE CYCLE</span>
+                    <span class="stat-value" id="footer-pressure">Normal (80 mmHg)</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Script Imports -->
+    <!-- Three.js Core Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Three.js OrbitControls for scene navigation -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- Three.js GLTFLoader for external models -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <!-- Three.js CSS2DRenderer for HTML annotations -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS2DRenderer.js"></script>
+    <!-- GSAP for smooth animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    
+    <!-- Application Logic Modules -->
+    <script src="data.js"></script>
+    <script src="heart3d.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
